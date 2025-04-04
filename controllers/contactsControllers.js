@@ -64,3 +64,21 @@ export const putUpdateContact = async (req, res, next) => {
         next(error);
     }
 };
+
+export const patchUpdateFavorite = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { favorite } = req.body;
+        if (typeof favorite !== "boolean") {
+            return next(HttpError(400, "Missing field favorite"));
+        }
+
+        const updatedContact = await contactsServices.updateStatusContact(id, { favorite });
+        if (!updatedContact) {
+            return next(HttpError(404));
+        }
+        res.status(200).json(updatedContact);
+    } catch (error) {
+        next(error);
+    }
+};
