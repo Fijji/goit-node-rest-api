@@ -3,8 +3,17 @@ import HttpError from "../helpers/HttpError.js";
 
 export const getAllContacts = async (req, res, next) => {
     try {
-        const contacts = await contactsServices.listContacts();
-        res.status(200).json(contacts);
+        const { page = 1, limit = 20, favorite } = req.query;
+        const userId = req.user.id;
+
+        const options = {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            favorite: favorite === "true" ? true : favorite === "false" ? false : undefined,
+        };
+
+        const result = await contactsServices.listContacts(userId, options);
+        res.status(200).json(result);
     } catch (error) {
         next(error);
     }
@@ -39,7 +48,8 @@ export const deleteContact = async (req, res, next) => {
 export const createContact = async (req, res, next) => {
     try {
         const { name, email, phone } = req.body;
-        const newContact = await contactsServices.addContact(name, email, phone);
+        const userId = req.user.id;
+        const newContact = await contactsServices.addContact(name, email, phone, userId);
         res.status(201).json(newContact);
     } catch (error) {
         next(error);
