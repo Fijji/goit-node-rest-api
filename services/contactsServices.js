@@ -1,7 +1,23 @@
 import Contact from "../models/contact.js";
 
-async function listContacts() {
-    return await Contact.findAll();
+async function listContacts(userId, { page, limit, favorite }) {
+    const offset = (page - 1) * limit;
+    const where = { owner: userId };
+    if (typeof favorite === "boolean") {
+        where.favorite = favorite;
+    }
+    const { count, rows } = await Contact.findAndCountAll({
+        where,
+        limit,
+        offset,
+    });
+
+    return {
+        contacts: rows,
+        page,
+        limit,
+        total: count,
+    };
 }
 
 async function getContactById(contactId) {
@@ -16,8 +32,8 @@ async function removeContact(contactId) {
     return contact;
 }
 
-async function addContact(name, email, phone) {
-    return await Contact.create({name, email, phone});
+async function addContact(name, email, phone, owner) {
+    return await Contact.create({ name, email, phone, owner });
 }
 
 async function updateContact(contactId, updates) {
