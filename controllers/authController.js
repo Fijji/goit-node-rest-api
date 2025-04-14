@@ -3,6 +3,9 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.js";
 import HttpError from "../helpers/HttpError.js";
 import { registerSchema, loginSchema } from "../schemas/authSchemas.js";
+import gravatar from "gravatar";
+import path from "path";
+import fs from "fs/promises";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default";
 
@@ -16,13 +19,19 @@ export const register = async (req, res, next) => {
         if (existingUser) return next(HttpError(409, "Email in use"));
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = await User.create({ email, password: hashedPassword });
+        const avatarURL = gravatar.url(email, {
+            s: '250',
+            d: 'retro',
+            protocol: 'https',
+        });
+        const newUser = await User.create({ email, password: hashedPassword, avatarURL});
 
         res.status(201).json({
             message: "Success",
             user: {
                 email: newUser.email,
                 subscription: newUser.subscription,
+                avatarURL: newUser.avatarURL
             },
         });
     } catch (error) {
@@ -50,6 +59,7 @@ export const login = async (req, res, next) => {
             user: {
                 email: user.email,
                 subscription: user.subscription,
+                avatarURL: user.avatarURL
             },
         });
     } catch (error) {
@@ -82,6 +92,7 @@ export const getCurrent = async (req, res, next) => {
         res.status(200).json({
             email: user.email,
             subscription: user.subscription,
+            avatarURL: user.avatarURL
         });
     } catch (error) {
         next(error);
@@ -108,3 +119,26 @@ export const updateSubscription = async (req, res, next) => {
         next(error);
     }
 };
+
+export const updateAvatar = async (req, res, next) => {
+    try {
+        if (!req.file) {
+            return next(HttpError(400, "No file uploaded"));
+        }
+
+        const { path: tempPath, filename } = req.file;
+        const avatarsDir = path.resolve("public", "avatars");
+        const finalPath = path.join(avatarsDir, filename);
+
+        await fs.rename(tempPath, finalPath);
+
+        const avatarURL = `/avatars/${filename}`;
+        req.user.avatarURL = avatarURL;
+        await req.user.save();
+
+        res.status(200).json({ avatarURL });
+    } catch (error) {
+        next(error);
+    }
+};
+
